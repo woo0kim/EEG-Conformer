@@ -40,6 +40,20 @@ reported accuracy comes from the selection rule rather than the model.
 Seeds 2023 / 2024 / 2025. Protocol A is bit-for-bit the released procedure; B and C
 differ from A only by the validation split and the label permutation respectively.
 
+**Only two of the four headline numbers are separate training runs.** The last-100-epoch
+mean is not its own experiment and has no flag: it is a different reduction of the same
+protocol-A run, because `run_validation.py` stores test accuracy at *every* epoch rather
+than only the maximum. The validation-selected number does need its own run, since
+holding out 20% of session T changes what the model trains on.
+
+```
+protocol A run  ->  curve['test']  -+-  .max()          -> 78.72%  released rule
+                                    +-  [-100:].mean()  -> 68.77%  last-100 mean
+                                    +-  [-1]            -> 69.21%  final epoch
+
+protocol B run  ->  curve['test'][argmax(curve['val'])] -> 70.01%  validation-selected
+```
+
 ## Results
 
 Grand mean over the 9 subjects (κ computed from the grand-mean accuracy, 4-class):
@@ -132,16 +146,50 @@ cd ..
 # 2. Epoch [2,6] s post-cue, 22 EEG channels, Chebyshev-II 4-40 Hz, as BCIIV2a.m does
 python code/preprocess_2a.py --raw data_raw --out data_proc
 
-# 3. One run (protocol B, subject 1, seed 2023)
+# 3. Protocol A -- released rule; the last-100-epoch mean is read off this same run
 python code/run_validation.py --subject 1 --seed 2023 --epochs 2000 \
-    --val-frac 0.2 --tag B --root data_proc/ --out results
+    --val-frac 0.0 --tag A --out results_rerun
 
-# 3'. Or all 72 runs on Slurm, submitted from this directory
-mkdir -p logs results && sbatch code/all.sbatch
+# 4. Protocol B -- 20% of session T held out, reported epoch chosen on it
+python code/run_validation.py --subject 1 --seed 2023 --epochs 2000 \
+    --val-frac 0.2 --tag B --out results_rerun
+
+# 5. Read both numbers out of whatever runs are present
+python code/analyze.py results_rerun
+```
+
+`--out` defaults to `results`, which already holds the 72 committed curves, and a re-run
+of the same tag/subject/seed overwrites its curve in place — pass a separate directory
+(`--out results_rerun` above) unless you mean to replace them. `--root` defaults to
+`data_proc/`, so it only needs passing if the preprocessed data lives elsewhere.
+
+The headline figures are means over 9 subjects x 3 seeds, i.e. 27 runs per protocol at
+roughly 19 min each on an A40 (0.56 s/epoch x 2000). On Slurm, array indices 0-26 are
+protocol A and 27-53 are protocol B, so A and B together are:
+
+```bash
+mkdir -p logs results_rerun
+sbatch --array=0-53%30 code/all.sbatch      # drop --array to include the C control too
 ```
 
 `code/all.sbatch` takes the project root from `$SLURM_SUBMIT_DIR` (override with
-`EEGCONF_ROOT`) and the interpreter from `EEGCONF_PY` (default `./venv/bin/python`).
+`EEGCONF_ROOT`) and the interpreter from `EEGCONF_PY` (default `./venv/bin/python`);
+edit the `--out` on its final line to redirect where curves land.
+
+For a single run, the two read-outs are one line each:
+
+```python
+import numpy as np
+d = np.load('results/curve_A_s1_seed2023.npz')
+d['test'][-100:].mean() * 100                    # 82.14  <- last-100 mean
+d['test'].max() * 100                            # 88.89  <- released rule, same run
+
+d = np.load('results/curve_B_s1_seed2023.npz')
+d['test'][int(np.nanargmax(d['val']))] * 100     # 86.46  <- validation-selected
+```
+
+`--epochs 50` gives a fast smoke test of the pipeline, but the last-100-epoch mean is
+meaningless below 100 epochs (`[-100:]` would silently average the whole run).
 
 ## Environment
 
