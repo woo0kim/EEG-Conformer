@@ -35,24 +35,23 @@ print()
 
 A_best, A_fin, A_tail, A_aver = agg('A', best), agg('A', final), agg('A', tail), agg('A', aver)
 B_sel, B_best = agg('B', valsel), agg('B', best)
-C_best, C_fin = agg('C', best), agg('C', final)
 
 hdr = (f"{'Sub':>4} {'paper':>7} | {'A:best':>13} {'A:final':>13} {'A:tail100':>13} {'A:mean-ep':>13}"
-       f" | {'B:val-sel':>13} | {'C:best(perm)':>13} {'C:final':>13}")
+       f" | {'B:val-sel':>13}")
 print(hdr); print('-' * len(hdr))
 def c(t, s): 
     m, sd, n = t[s]
     return f'{m:6.2f}±{sd:4.2f}' if n else '      n/a    '
 for s in range(1, 10):
     print(f'{s:>4} {PAPER_T2[s-1]:7.2f} | {c(A_best,s):>13} {c(A_fin,s):>13} {c(A_tail,s):>13} {c(A_aver,s):>13}'
-          f' | {c(B_sel,s):>13} | {c(C_best,s):>13} {c(C_fin,s):>13}')
+          f' | {c(B_sel,s):>13}')
 
 def gm(t):
     v = [t[s][0] for s in range(1, 10) if not np.isnan(t[s][0])]
     return np.mean(v) if v else np.nan
 print('-' * len(hdr))
 print(f"{'AVG':>4} {np.mean(PAPER_T2):7.2f} | {gm(A_best):11.2f}   {gm(A_fin):11.2f}   {gm(A_tail):11.2f}   "
-      f"{gm(A_aver):11.2f}   | {gm(B_sel):11.2f}   | {gm(C_best):11.2f}   {gm(C_fin):11.2f}")
+      f"{gm(A_aver):11.2f}   | {gm(B_sel):11.2f}")
 
 print()
 print('kappa (from grand-mean accuracy, 4-class):')
@@ -76,15 +75,6 @@ if eps:
     print(f'  argmax epoch: median {int(np.median(eps))}, min {min(eps)}, max {max(eps)}, '
           f'{100*np.mean([e>1000 for e in eps]):.0f}% land after epoch 1000')
 
-print()
-print('=== label-permutation control (protocol C) ===')
-cb = [best(d) * 100 for k, v in runs.items() if k[0] == 'C' for d in v]
-cf = [final(d) * 100 for k, v in runs.items() if k[0] == 'C' for d in v]
-ca = [aver(d) * 100 for k, v in runs.items() if k[0] == 'C' for d in v]
-if cb:
-    print(f'  best over 2000 epochs : {np.mean(cb):.2f} ± {np.std(cb, ddof=1):.2f}  (chance = 25.00)  n={len(cb)}')
-    print(f'  final epoch           : {np.mean(cf):.2f} ± {np.std(cf, ddof=1):.2f}')
-    print(f'  mean over all epochs  : {np.mean(ca):.2f} ± {np.std(ca, ddof=1):.2f}')
 
 print()
 sec = [float(d['sec_per_epoch']) for v in runs.values() for d in v]
@@ -103,5 +93,5 @@ if conv:
     print(f'=== convergence: test acc first reaches (tail-100 mean - 1pp) at epoch {int(np.median(conv))} (median); paper says ~250')
 
 json.dump({'A_best': {s: A_best[s][0] for s in A_best}, 'A_tail': {s: A_tail[s][0] for s in A_tail},
-           'B_sel': {s: B_sel[s][0] for s in B_sel}, 'C_best': {s: C_best[s][0] for s in C_best}},
+           'B_sel': {s: B_sel[s][0] for s in B_sel}},
           open(os.path.join(RESULTS, 'summary.json'), 'w'), indent=1)

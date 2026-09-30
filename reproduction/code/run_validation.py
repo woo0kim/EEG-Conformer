@@ -160,9 +160,8 @@ class Conformer(nn.Sequential):
 
 
 class ExP():
-    def __init__(self, nsub, root, logpath, n_epochs, val_frac, permute_labels=False):  # [MOD]
+    def __init__(self, nsub, root, logpath, n_epochs, val_frac):   # [MOD] args instead of hardcoded
         super(ExP, self).__init__()
-        self.permute_labels = permute_labels                        # [MOD]
         self.batch_size = 72
         self.n_epochs = n_epochs                                    # [MOD] was 2000
         self.c_dim = 4
@@ -233,9 +232,6 @@ class ExP():
         self.testLabel = self.test_label[0]
 
         # [MOD] protocol B: carve a validation set out of session T before standardising
-        if self.permute_labels:                                  # [MOD] protocol C control
-            self.allLabel = self.allLabel[np.random.permutation(len(self.allLabel))]
-
         self.valData = self.valLabel = None
         if self.val_frac > 0:
             nval = int(round(self.val_frac * len(self.allData)))
@@ -336,7 +332,6 @@ def main():
     ap.add_argument('--epochs', type=int, default=2000)
     ap.add_argument('--val-frac', type=float, default=0.0)
     ap.add_argument('--tag', type=str, default='A')
-    ap.add_argument('--permute-labels', action='store_true')
     ap.add_argument('--root', type=str, default='data_proc/')   # [MOD] repo-relative default
     ap.add_argument('--out', type=str, default='results')        # [MOD] repo-relative default
     args = ap.parse_args()
@@ -349,8 +344,7 @@ def main():
     name = f'{args.tag}_s{args.subject}_seed{seed_n}'
     print(f'=== {name} | epochs={args.epochs} val_frac={args.val_frac} | GPU {torch.cuda.get_device_name(0)}', flush=True)
     t0 = datetime.datetime.now()
-    exp = ExP(args.subject, args.root, f'{args.out}/log_{name}.txt', args.epochs, args.val_frac,
-              permute_labels=args.permute_labels)
+    exp = ExP(args.subject, args.root, f'{args.out}/log_{name}.txt', args.epochs, args.val_frac)
     bestAcc, averAcc, _, _ = exp.train()
     np.savez(f'{args.out}/curve_{name}.npz', test=exp.test_curve, val=exp.val_curve,
              train=exp.train_curve, best=bestAcc, aver=averAcc, sec_per_epoch=exp.sec_per_epoch,

@@ -26,7 +26,7 @@ def per_sub(tag, fn):
     return [np.mean([fn(d) for d in runs[(tag, s)]]) if runs.get((tag, s)) else np.nan
             for s in range(1, 10)]
 
-a_best, b_sel, c_best = per_sub('A', best), per_sub('B', vsel), per_sub('C', best)
+a_best, b_sel = per_sub('A', best), per_sub('B', vsel)
 gm = np.nanmean
 
 def clean(ax):
@@ -51,15 +51,11 @@ for k, (_, vals, col) in enumerate(series):          # relief: label only the Av
     ax.text(9 + (k - 1) * w, vals[9] + 1.5, f'{vals[9]:.1f}', ha='center', va='bottom',
             fontsize=8.5, color=INK, fontweight='bold', rotation=90)
 
-permavg = gm(c_best)
-ax.axhline(permavg, color=MUTED, lw=1.3, ls=(0, (5, 3)))
 ax.axhline(25, color=MUTED, lw=1.0, ls=':')
-ax.text(10.2, permavg, f'scrambled labels,\nsame rule: {permavg:.1f}%', va='center',
-        fontsize=8.5, color=INK2, bbox=BB)
 ax.text(10.2, 25, 'chance 25%', va='center', fontsize=8.5, color=MUTED, bbox=BB)
 
 ax.set_xticks(x); ax.set_xticklabels([f'S{i}' for i in range(1, 10)] + ['Avg'], color=INK2)
-ax.set_xlim(-0.6, 11.7); ax.set_ylim(20, 102)
+ax.set_xlim(-0.6, 11.2); ax.set_ylim(20, 102)
 ax.set_ylabel('Test accuracy (%)', fontsize=9.5, color=INK2)
 ax.set_title('BCI IV 2a: reported vs. reproduced accuracy, by epoch-selection rule',
              fontsize=12, color=INK, loc='left', pad=34)

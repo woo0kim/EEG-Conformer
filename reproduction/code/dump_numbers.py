@@ -28,11 +28,11 @@ def per_sub(tag, fn):
 def flat(tag, fn):
     return [fn(d) for k, v in runs.items() if k[0] == tag for d in v]
 
-out = {'n_runs': {t: sum(len(v) for k, v in runs.items() if k[0] == t) for t in 'ABC'},
+out = {'n_runs': {t: sum(len(v) for k, v in runs.items() if k[0] == t) for t in 'AB'},
        'paper_T2': PAPER_T2, 'paper_T2_avg': float(np.mean(PAPER_T2))}
 for tag, fn, nm in [('A', best, 'A_best'), ('A', tail, 'A_tail'), ('A', fin, 'A_final'),
                     ('A', aver, 'A_aver'), ('B', vsel, 'B_sel'), ('B', best, 'B_best'),
-                    ('C', best, 'C_best'), ('C', tail, 'C_tail')]:
+                    ]:
     m, s_ = per_sub(tag, fn)
     out[nm] = m
     out[nm + '_sd'] = s_
@@ -71,7 +71,7 @@ if spread:
     out['A_best_seed_sd_mean'] = float(np.mean(spread))
     out['A_best_seed_sd_max'] = float(np.max(spread))
 
-for k in ('A_best', 'A_tail', 'B_sel', 'C_best'):
+for k in ('A_best', 'A_tail', 'B_sel'):
     a = out.get(k + '_avg')
     if a is not None:
         out[k + '_kappa'] = round((a / 100 - 0.25) / 0.75, 4)

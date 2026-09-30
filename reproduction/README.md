@@ -5,7 +5,7 @@ This directory reproduces the BCI IV 2a (Dataset I) result of
 > Y. Song, Q. Zheng, B. Liu, X. Gao, *EEG Conformer: Convolutional Transformer for
 > EEG Decoding and Visualization*, IEEE TNSRE 31:710–719, 2023
 
-under three epoch-selection rules, in order to report the two numbers the released
+under alternative epoch-selection rules, in order to report the two numbers the released
 code does not print: **the mean test accuracy over the last 100 epochs** and **the test
 accuracy at the epoch chosen by a held-out validation set**.
 
@@ -35,10 +35,9 @@ reported accuracy comes from the selection rule rather than the model.
 |-----|---------------|----------------|------|
 | **A** | all 288 trials of session T | released rule — `max` over 2000 test evaluations; also the last-100-epoch mean, the final epoch, and the all-epoch mean | 9 subjects × 3 seeds = 27 |
 | **B** | 80% of session T (20% held out) | epoch with the highest **validation** accuracy; test accuracy read off at that epoch | 9 subjects × 3 seeds = 27 |
-| **C** | session T with training labels scrambled | released rule, as a floor for the selection procedure | 6 subjects × 3 seeds = 18 |
 
-Seeds 2023 / 2024 / 2025. Protocol A is bit-for-bit the released procedure; B and C
-differ from A only by the validation split and the label permutation respectively.
+Seeds 2023 / 2024 / 2025. Protocol A is bit-for-bit the released procedure; B differs
+from A only by the held-out validation split.
 
 **Only two of the four headline numbers are separate training runs.** The last-100-epoch
 mean is not its own experiment and has no flag: it is a different reduction of the same
@@ -66,14 +65,11 @@ Grand mean over the 9 subjects (κ computed from the grand-mean accuracy, 4-clas
 | **A** — final epoch | 69.21 | 0.5895 |
 | **A** — mean over all 2000 epochs | 66.74 | 0.5565 |
 | **B** — validation-selected epoch | **70.01** | 0.6001 |
-| **C** — scrambled labels, released rule | 35.15 | 0.1353 |
 
 The released rule reproduces the paper (78.72 vs 78.66 reported, a 0.06 pp difference).
 The same runs give **68.77%** over their last 100 epochs and **70.01%** under a real
 validation split — 8.7 to 9.9 pp below the reported figure, and κ 0.58–0.60 against the
-reported 0.7155. A model trained on scrambled labels reaches 35.15% under the same rule
-against 25% chance, so roughly 10 pp of the max-over-epochs statistic is available
-without any learnable signal at all.
+reported 0.7155.
 
 Per subject, mean ± SD over the 3 seeds:
 
@@ -107,12 +103,12 @@ buy selection, not convergence.
 
 ```
 code/preprocess_2a.py    port of preprocessing/BCIIV2a.m to the open BNCI 001-2014 .mat release
-code/run_validation.py   conformer.py training loop verbatim + --val-frac / --permute-labels
-code/all.sbatch          Slurm array covering all 72 runs (A 0-26, B 27-53, C 54-71)
+code/run_validation.py   conformer.py training loop verbatim + --val-frac (protocol B)
+code/all.sbatch          Slurm array covering all 54 runs (A 0-26, B 27-53)
 code/analyze.py          prints the comparison table above; writes results/summary.json
 code/dump_numbers.py     writes results/numbers.json (every figure quoted here)
 code/make_figure.py      writes results/validation_figure.png
-results/curve_*.npz      per-epoch test / val / train accuracy for all 72 runs
+results/curve_*.npz      per-epoch test / val / train accuracy for all 54 runs
 results/summary.json     per-subject means per protocol
 results/numbers.json     every number in this README, machine-readable
 ```
@@ -158,18 +154,18 @@ python code/run_validation.py --subject 1 --seed 2023 --epochs 2000 \
 python code/analyze.py results_rerun
 ```
 
-`--out` defaults to `results`, which already holds the 72 committed curves, and a re-run
+`--out` defaults to `results`, which already holds the 54 committed curves, and a re-run
 of the same tag/subject/seed overwrites its curve in place — pass a separate directory
 (`--out results_rerun` above) unless you mean to replace them. `--root` defaults to
 `data_proc/`, so it only needs passing if the preprocessed data lives elsewhere.
 
 The headline figures are means over 9 subjects x 3 seeds, i.e. 27 runs per protocol at
-roughly 19 min each on an A40 (0.56 s/epoch x 2000). On Slurm, array indices 0-26 are
-protocol A and 27-53 are protocol B, so A and B together are:
+roughly 19 min each on an A40 (0.57 s/epoch x 2000). `code/all.sbatch` covers all 54 in
+one array — indices 0-26 are protocol A, 27-53 are protocol B:
 
 ```bash
 mkdir -p logs results_rerun
-sbatch --array=0-53%30 code/all.sbatch      # drop --array to include the C control too
+sbatch code/all.sbatch
 ```
 
 `code/all.sbatch` takes the project root from `$SLURM_SUBMIT_DIR` (override with
@@ -196,7 +192,7 @@ meaningless below 100 epochs (`[-100:]` would silently average the whole run).
 Runs were made on USC CARC, one NVIDIA A40 per run: Python 3.11.9, torch 2.6.0+cu124,
 numpy 2.4.6, scipy 1.17.1, einops 0.8.2, matplotlib 3.11.2, with
 `cudnn.deterministic = True` and `cudnn.benchmark = False` as in the released code.
-Mean 0.561 s/epoch (range 0.359–0.844 across node types); the paper reports 0.27 s/epoch
+Mean 0.567 s/epoch (range 0.359–0.817 across node types); the paper reports 0.27 s/epoch
 on an RTX 3090.
 
 ## Scope
